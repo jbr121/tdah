@@ -1,0 +1,8 @@
+{
+  "name": "agora-push",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@pushforge/builder": "^1.1.1"
+  }
+}

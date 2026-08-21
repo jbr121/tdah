@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+push-server/.dev.vars
+push-server/secrets.json
+push-server/node_modules
 
 # Editor directories and files
 .vscode/*

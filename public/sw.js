@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agora-v4'
+const CACHE_NAME = 'agora-v5'
 const BASE = new URL('./', self.location).pathname
 
 self.addEventListener('install', (event) => {
@@ -33,13 +33,35 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
+self.addEventListener('push', (event) => {
+  let data = { title: 'Malu', body: 'Hora de olhar pra isso.' }
+  try {
+    data = { ...data, ...event.data.json() }
+  } catch {
+    const text = event.data?.text()
+    if (text) data.body = text
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Malu', {
+      body: data.body || 'Hora de olhar pra isso.',
+      icon: `${BASE}icon-192.png`,
+      badge: `${BASE}icon-192.png`,
+      tag: data.tag || 'malu',
+      data: { url: BASE },
+    })
+  )
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       const open = clients.find((client) => 'focus' in client)
       if (open) return open.focus()
-      if (self.clients.openWindow) return self.clients.openWindow(BASE)
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(event.notification.data?.url || BASE)
+      }
       return undefined
     })
   )

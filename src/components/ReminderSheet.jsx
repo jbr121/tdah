@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { openCalendarAlarm } from '../lib/calendar'
-import { atFromTime, formatWhen, isIos, reminderPresets } from '../lib/format'
+import { atFromTime, formatWhen, reminderPresets } from '../lib/format'
+import { isStandalone } from '../lib/push'
 import { useReminders } from '../hooks/useReminders'
 import { useTasks } from '../hooks/useTasks'
 
@@ -9,40 +9,9 @@ export default function ReminderSheet() {
   const { clearReminder } = useTasks()
   const presets = useMemo(() => reminderPresets(), [sheetTask?.id])
   const [custom, setCustom] = useState('09:00')
-  const [calendar, setCalendar] = useState(() => isIos())
+  const standalone = isStandalone()
 
   if (!sheetTask) return null
-
-  if (sheetTask.askCalendar && sheetTask.remindAt) {
-    return (
-      <Sheet onClose={closeReminder}>
-        <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">Alarme</p>
-        <h2 className="mt-2 text-[22px] font-medium tracking-tight text-cream">
-          No iPhone, o Calendário toca mesmo com o app fechado.
-        </h2>
-        <p className="mt-2 text-[15px] leading-relaxed text-mute">
-          Lembrete interno às {formatWhen(sheetTask.remindAt)}. Adicione o alarme nativo se quiser sair do app.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            openCalendarAlarm({ title: sheetTask.text, at: sheetTask.remindAt })
-            closeReminder()
-          }}
-          className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
-        >
-          Adicionar ao Calendário
-        </button>
-        <button
-          type="button"
-          onClick={closeReminder}
-          className="mt-2 flex h-12 w-full items-center justify-center text-[15px] text-mute"
-        >
-          Agora não
-        </button>
-      </Sheet>
-    )
-  }
 
   return (
     <Sheet onClose={closeReminder}>
@@ -50,9 +19,14 @@ export default function ReminderSheet() {
       <h2 className="mt-2 line-clamp-2 text-[22px] font-medium tracking-tight text-cream">
         {sheetTask.text}
       </h2>
-      <p className="mt-1 text-[14px] text-mute">Quando te chamo, Malu?</p>
+      <p className="mt-1 text-[14px] text-mute">Escolhe a hora. O iPhone avisa sozinho.</p>
       {sheetTask.remindAt && (
         <p className="mt-1 text-[14px] text-mute">Já está em {formatWhen(sheetTask.remindAt)}</p>
+      )}
+      {!standalone && (
+        <p className="mt-3 rounded-2xl bg-ink px-4 py-3 text-[13px] leading-relaxed text-mute">
+          Uma vez: no Safari, Compartilhar → Adicionar à Tela de Início. Depois abra pelo ícone e permita avisos.
+        </p>
       )}
 
       <div className="mt-5 grid grid-cols-2 gap-2">
@@ -60,7 +34,7 @@ export default function ReminderSheet() {
           <button
             key={preset.id}
             type="button"
-            onClick={() => saveReminder(sheetTask, preset.at, calendar)}
+            onClick={() => saveReminder(sheetTask, preset.at)}
             className="flex h-14 items-center justify-center rounded-2xl bg-ink text-[15px] font-medium text-cream active:scale-[0.98]"
           >
             {preset.label}
@@ -78,22 +52,12 @@ export default function ReminderSheet() {
         />
         <button
           type="button"
-          onClick={() => saveReminder(sheetTask, atFromTime(custom), calendar)}
+          onClick={() => saveReminder(sheetTask, atFromTime(custom))}
           className="h-14 rounded-2xl bg-sage px-5 text-[15px] font-semibold text-ink"
         >
           Ok
         </button>
       </div>
-
-      <label className="mt-5 flex min-h-12 items-center gap-3 text-[15px] text-cream">
-        <input
-          type="checkbox"
-          checked={calendar}
-          onChange={(event) => setCalendar(event.target.checked)}
-          className="h-5 w-5 accent-sage"
-        />
-        Alarme no Calendário (iPhone)
-      </label>
 
       {sheetTask.remindAt && (
         <button

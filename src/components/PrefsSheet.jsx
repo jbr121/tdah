@@ -1,13 +1,27 @@
-import { openCalendarAlarm } from '../lib/calendar'
-import { atFromTime } from '../lib/format'
+import { useState } from 'react'
+import { isStandalone, sendTestPush } from '../lib/push'
 import { usePrefs } from '../hooks/usePrefs'
 import { useReminders } from '../hooks/useReminders'
 
 export default function PrefsSheet() {
-  const { prefsOpen, setPrefsOpen } = useReminders()
+  const { prefsOpen, setPrefsOpen, enablePush } = useReminders()
   const { prefs, updatePrefs } = usePrefs()
+  const [status, setStatus] = useState('')
+  const standalone = isStandalone()
 
   if (!prefsOpen) return null
+
+  async function activate() {
+    const result = await enablePush()
+    if (result.ok) setStatus('Avisos ligados. Pode fechar o app.')
+    else if (result.reason === 'denied') setStatus('O iPhone bloqueou. Ajustes → Malu → Avisos.')
+    else setStatus('Abra pelo ícone da Tela de Início e tente de novo.')
+  }
+
+  async function test() {
+    const result = await sendTestPush()
+    setStatus(result.ok ? 'Mandei um teste. Bloqueia a tela e espera uns segundos.' : 'Não consegui enviar o teste.')
+  }
 
   return (
     <div className="absolute inset-0 z-40 flex flex-col justify-end bg-black/70">
@@ -25,56 +39,34 @@ export default function PrefsSheet() {
         <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">Sons e avisos</p>
         <h2 className="mt-2 text-[22px] font-medium tracking-tight text-cream">Como te chamar</h2>
 
+        {!standalone && (
+          <p className="mt-4 rounded-2xl bg-ink px-4 py-3 text-[14px] leading-relaxed text-mute">
+            No iPhone: Safari → Compartilhar → Adicionar à Tela de Início. Abra pelo ícone novo, não pela aba.
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={activate}
+          className="mt-5 flex h-14 w-full items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink"
+        >
+          Ativar avisos no iPhone
+        </button>
+        <button
+          type="button"
+          onClick={test}
+          className="mt-2 flex h-12 w-full items-center justify-center text-[15px] text-mute"
+        >
+          Enviar aviso de teste
+        </button>
+        {status && <p className="mt-3 text-[14px] leading-relaxed text-cream">{status}</p>}
+
         <Toggle
           label="Som do alarme"
-          hint="Toque suave no fim do ciclo e nos lembretes"
+          hint="Toque suave quando o app estiver aberto"
           on={prefs.sound}
           onChange={(sound) => updatePrefs({ sound })}
         />
-        <Toggle
-          label="Notificações"
-          hint="No iPhone, adicione o app à Tela de Início e permita avisos"
-          on={prefs.notify}
-          onChange={(notify) => updatePrefs({ notify })}
-        />
-
-        <p className="mt-6 text-[13px] text-mute">Lembrete diário</p>
-        <div className="mt-2 flex gap-2">
-          <input
-            type="time"
-            value={prefs.dailyAt || '09:00'}
-            onChange={(event) => updatePrefs({ dailyAt: event.target.value })}
-            className="h-14 flex-1 rounded-2xl border-0 bg-ink px-4 text-[16px] text-cream outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const at = prefs.dailyAt || '09:00'
-              updatePrefs({ dailyAt: at })
-              openCalendarAlarm({
-                title: 'Malu, o que precisa sair da cabeça?',
-                at: atFromTime(at),
-                daily: true,
-              })
-            }}
-            className="h-14 rounded-2xl bg-sage px-4 text-[14px] font-semibold text-ink"
-          >
-            Calendário
-          </button>
-        </div>
-        {prefs.dailyAt ? (
-          <button
-            type="button"
-            onClick={() => updatePrefs({ dailyAt: '' })}
-            className="mt-2 flex h-11 w-full items-center justify-center text-[14px] text-mute"
-          >
-            Desligar lembrete diário
-          </button>
-        ) : (
-          <p className="mt-2 text-[13px] leading-relaxed text-mute">
-            Defina um horário e, no iPhone, toque em Calendário para o alarme repetir todos os dias.
-          </p>
-        )}
       </div>
     </div>
   )
