@@ -52,7 +52,7 @@ export default function PrefsSheet() {
               const at = prefs.dailyAt || '09:00'
               updatePrefs({ dailyAt: at })
               openCalendarAlarm({
-                title: 'O que precisa sair da cabeça?',
+                title: 'Malu, o que precisa sair da cabeça?',
                 at: atFromTime(at),
                 daily: true,
               })

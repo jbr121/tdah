@@ -50,8 +50,9 @@ export default function ReminderSheet() {
       <h2 className="mt-2 line-clamp-2 text-[22px] font-medium tracking-tight text-cream">
         {sheetTask.text}
       </h2>
+      <p className="mt-1 text-[14px] text-mute">Quando te chamo, Malu?</p>
       {sheetTask.remindAt && (
-        <p className="mt-1 text-[14px] text-mute">Agendado para {formatWhen(sheetTask.remindAt)}</p>
+        <p className="mt-1 text-[14px] text-mute">Já está em {formatWhen(sheetTask.remindAt)}</p>
       )}
 
       <div className="mt-5 grid grid-cols-2 gap-2">

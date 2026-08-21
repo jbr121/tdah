@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { unlockAlarm } from '../lib/alarm'
-import { FOCUS_MS, FOCUS_OPTIONS, formatMs } from '../lib/format'
+import { FOCUS_OPTIONS, formatMs } from '../lib/format'
+import { defaultFocusMs, kindOf } from '../lib/kinds'
 import { useApp } from '../hooks/useApp'
 import { useFocus } from '../hooks/useFocus'
 import { useTasks } from '../hooks/useTasks'
@@ -19,10 +20,15 @@ export default function Focus() {
     startBreak,
   } = useFocus()
   const { startFocus, leaveFocus, completeWithUndo } = useApp()
-  const [duration, setDuration] = useState(FOCUS_MS)
 
   const focused = pending.find((task) => task.id === session?.taskId) ?? nowTask
+  const [duration, setDuration] = useState(() => defaultFocusMs(focused?.kind))
   const isBreak = session?.kind === 'break'
+  const kind = kindOf(focused)
+
+  useEffect(() => {
+    if (!session) setDuration(defaultFocusMs(focused?.kind))
+  }, [focused?.id, focused?.kind, session])
 
   if (!focused) {
     return (
@@ -32,7 +38,7 @@ export default function Focus() {
         </div>
         <h1 className="text-[22px] font-medium tracking-tight text-cream">Nada para focar</h1>
         <p className="mt-2 max-w-[16rem] text-[15px] leading-relaxed text-mute">
-          Capture um pensamento. Depois volte aqui e faça só isso.
+          Capture um pensamento, Malu. Depois volte aqui e faça só isso.
         </p>
       </section>
     )
@@ -42,7 +48,9 @@ export default function Focus() {
     return (
       <section className="flex min-h-full flex-col px-1 pt-2">
         <header className="mb-8">
-          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">Foco</p>
+          <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">
+            {kind.label}
+          </p>
           <h1 className="mt-3 text-[26px] font-medium leading-snug tracking-tight text-cream">
             {focused.text}
           </h1>
@@ -51,7 +59,7 @@ export default function Focus() {
           <TimerRing
             progress={1}
             label={formatMs(duration)}
-            caption="um ciclo"
+            caption={kind.id === 'estudo' ? 'bloco de estudo' : 'um ciclo'}
           />
           <div className="mt-8 flex w-full max-w-xs gap-2">
             {FOCUS_OPTIONS.map((option) => (
@@ -72,7 +80,7 @@ export default function Focus() {
             onClick={() => startFocus(focused.id, duration)}
             className="mt-6 flex h-14 w-full max-w-xs items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
           >
-            Começar
+            {kind.id === 'estudo' ? 'Estudar' : 'Começar'}
           </button>
         </div>
       </section>

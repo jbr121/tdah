@@ -1,10 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
+import { USER_NAME } from '../lib/kinds'
+import { useReminders } from '../hooks/useReminders'
 import { useTasks } from '../hooks/useTasks'
+import KindBar from './KindBar'
+
+const LAST_KIND_KEY = 'agora.lastKind'
+
+function loadKind() {
+  try {
+    return localStorage.getItem(LAST_KIND_KEY) || 'tarefa'
+  } catch {
+    return 'tarefa'
+  }
+}
 
 export default function QuickCapture() {
   const { addTask } = useTasks()
+  const { openReminder } = useReminders()
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
+  const [kind, setKind] = useState(loadKind)
   const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight)
   const inputRef = useRef(null)
 
@@ -40,8 +55,13 @@ export default function QuickCapture() {
   }
 
   function save() {
-    const task = addTask(text)
-    if (task) close()
+    const task = addTask(text, kind)
+    if (!task) return
+    localStorage.setItem(LAST_KIND_KEY, kind)
+    close()
+    if (kind === 'lembrete') {
+      window.setTimeout(() => openReminder(task), 120)
+    }
   }
 
   const canSave = text.trim().length > 0
@@ -50,7 +70,10 @@ export default function QuickCapture() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setKind(loadKind())
+          setOpen(true)
+        }}
         aria-label="Captura rápida"
         className="absolute left-1/2 z-20 flex h-[4.25rem] w-[4.25rem] -translate-x-1/2 items-center justify-center rounded-full bg-sage text-ink shadow-[0_10px_28px_rgba(143,169,143,0.22)] transition-transform duration-150 active:scale-95"
         style={{ bottom: 'calc(4.85rem + env(safe-area-inset-bottom))' }}
@@ -78,19 +101,28 @@ export default function QuickCapture() {
 
           <div className="flex min-h-0 flex-1 flex-col px-5 pb-4">
             <h2 className="mb-1 text-[26px] font-medium tracking-tight text-cream">
-              Tira da cabeça
+              {USER_NAME}, tira da cabeça
             </h2>
-            <p className="mb-4 text-[15px] text-mute">Sem filtrar. Você organiza depois.</p>
+            <p className="mb-4 text-[15px] text-mute">Escolhe o tipo e solta. Sem julgar.</p>
+            <KindBar value={kind} onChange={setKind} />
             <textarea
               ref={inputRef}
               value={text}
               onChange={(event) => setText(event.target.value)}
-              rows={5}
+              rows={4}
               enterKeyHint="done"
               autoCapitalize="sentences"
               autoCorrect="on"
-              placeholder="O que está ocupando espaço agora?"
-              className="min-h-32 w-full flex-1 resize-none rounded-[22px] border-0 bg-panel px-4 py-4 text-[17px] leading-relaxed text-cream outline-none placeholder:text-mute/70"
+              placeholder={
+                kind === 'estudo'
+                  ? 'Matéria, prova, leitura…'
+                  : kind === 'lembrete'
+                    ? 'O que você não pode esquecer?'
+                    : kind === 'pessoal'
+                      ? 'Casa, gente, você…'
+                      : 'O que precisa ser feito?'
+              }
+              className="mt-3 min-h-28 w-full flex-1 resize-none rounded-[22px] border-0 bg-panel px-4 py-4 text-[17px] leading-relaxed text-cream outline-none placeholder:text-mute/70"
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault()
@@ -104,7 +136,7 @@ export default function QuickCapture() {
               disabled={!canSave}
               className="mt-4 flex min-h-14 w-full shrink-0 items-center justify-center rounded-2xl bg-sage text-base font-semibold text-ink transition-transform duration-150 enabled:active:scale-[0.98] disabled:opacity-35"
             >
-              Capturar
+              {kind === 'lembrete' ? 'Capturar e lembrar' : 'Capturar'}
             </button>
           </div>
         </div>

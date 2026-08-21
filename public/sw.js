@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agora-v3'
+const CACHE_NAME = 'agora-v4'
 const BASE = new URL('./', self.location).pathname
 
 self.addEventListener('install', (event) => {

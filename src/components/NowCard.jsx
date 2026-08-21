@@ -1,4 +1,5 @@
 import { formatMs, formatWhen } from '../lib/format'
+import { focusVerb, kindOf } from '../lib/kinds'
 import { useApp } from '../hooks/useApp'
 import { useFocus } from '../hooks/useFocus'
 import { useReminders } from '../hooks/useReminders'
@@ -9,10 +10,25 @@ export default function NowCard({ task, leaving, onComplete }) {
   const { startFocus } = useApp()
   const { session, remainingMs, progress, ended } = useFocus()
   const { openReminder } = useReminders()
+  const kind = kindOf(task)
   const isFocused = session?.taskId === task.id
   const hasCycle = isFocused && remainingMs < (session?.durationMs ?? 0)
-  const cta = ended && isFocused ? 'Outro ciclo' : hasCycle ? 'Continuar' : 'Focar'
+  const cta = ended && isFocused
+    ? 'Outro ciclo'
+    : hasCycle
+      ? 'Continuar'
+      : kind.id === 'lembrete' && !(task.remindAt && task.remindAt > Date.now())
+        ? 'Definir alarme'
+        : focusVerb(kind.id)
   const upcoming = task.remindAt && task.remindAt > Date.now()
+
+  function handlePrimary() {
+    if (kind.id === 'lembrete' && !upcoming && !hasCycle) {
+      openReminder(task)
+      return
+    }
+    startFocus(task.id)
+  }
 
   return (
     <article
@@ -21,7 +37,9 @@ export default function NowCard({ task, leaving, onComplete }) {
       }`}
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">Agora</p>
+        <p className="text-[12px] font-medium uppercase tracking-[0.16em] text-sage">
+          Agora · {kind.label}
+        </p>
         <button
           type="button"
           onClick={() => openReminder(task)}
@@ -74,7 +92,7 @@ export default function NowCard({ task, leaving, onComplete }) {
         </button>
         <button
           type="button"
-          onClick={() => startFocus(task.id)}
+          onClick={handlePrimary}
           className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink transition-transform duration-150 active:scale-[0.98]"
         >
           {cta}
@@ -89,6 +107,7 @@ export function QueueItem({ task, leaving, onComplete }) {
   const { setNow } = useTasks()
   const { openReminder } = useReminders()
   const upcoming = task.remindAt && task.remindAt > Date.now()
+  const kind = kindOf(task)
 
   return (
     <li
@@ -116,7 +135,8 @@ export function QueueItem({ task, leaving, onComplete }) {
             type="button"
             onClick={() => {
               setNow(task.id)
-              startFocus(task.id)
+              if (kind.id === 'lembrete' && !upcoming) openReminder(task)
+              else startFocus(task.id)
             }}
             className="min-w-0 flex-1 py-2 pr-1 text-left"
           >
@@ -127,9 +147,10 @@ export function QueueItem({ task, leaving, onComplete }) {
             >
               {task.text}
             </p>
-            {upcoming && (
-              <p className="mt-0.5 text-[12px] text-mute">{formatWhen(task.remindAt)}</p>
-            )}
+            <p className="mt-0.5 text-[12px] text-mute">
+              {kind.label}
+              {upcoming ? ` · ${formatWhen(task.remindAt)}` : ''}
+            </p>
           </button>
           <button
             type="button"

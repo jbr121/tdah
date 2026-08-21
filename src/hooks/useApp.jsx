@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { unlockAlarm } from '../lib/alarm'
-import { FOCUS_MS } from '../lib/format'
+import { defaultFocusMs } from '../lib/kinds'
 import { useFocus } from './useFocus'
 import { useTasks } from './useTasks'
 
 const AppContext = createContext(null)
 
 export function AppStateProvider({ children }) {
-  const { nowTask, setNow, completeTask, uncompleteTask } = useTasks()
+  const { nowTask, pending, setNow, completeTask, uncompleteTask } = useTasks()
   const focus = useFocus()
   const [screen, setScreen] = useState(() => {
     try {
@@ -32,23 +32,26 @@ export function AppStateProvider({ children }) {
         return
       }
 
+      const task = pending.find((item) => item.id === id) ?? nowTask
+      const ms = durationMs ?? defaultFocusMs(task?.kind)
+
       unlockAlarm()
       setNow(id)
 
       const sameTask = focus.session?.taskId === id
       if (!sameTask) {
-        focus.start(id, durationMs ?? FOCUS_MS)
+        focus.start(id, ms)
       } else if (!focus.session.running && focus.remainingMs > 0 && !durationMs) {
         focus.resume()
       } else if (focus.ended && !durationMs) {
         focus.anotherCycle()
       } else if (durationMs) {
-        focus.start(id, durationMs)
+        focus.start(id, ms)
       }
 
       setScreen('focus')
     },
-    [nowTask, setNow, focus]
+    [nowTask, pending, setNow, focus]
   )
 
   const leaveFocus = useCallback(() => {

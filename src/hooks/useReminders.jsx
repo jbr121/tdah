@@ -42,7 +42,7 @@ export function RemindersProvider({ children }) {
       if (prefs.sound) playChime()
       if (prefs.notify) {
         notify({
-          title: 'Hora de olhar pra isso',
+          title: 'Hora de olhar pra isso, Malu',
           body: task.text,
           tag: `task-${task.id}`,
         })
@@ -87,7 +87,7 @@ export function RemindersProvider({ children }) {
       if (prefs.sound) playChime()
       if (prefs.notify) {
         notify({
-          title: 'Agora',
+          title: 'Malu',
           body: 'O que precisa sair da cabeça?',
           tag: 'agora-daily',
         })

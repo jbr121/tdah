@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { KINDS, USER_NAME } from '../lib/kinds'
 import { useApp } from '../hooks/useApp'
 import { useTasks } from '../hooks/useTasks'
 import NowCard, { QueueItem } from './NowCard'
 
-export default function TaskList() {
-  const { nowTask, queue, completedToday } = useTasks()
+export default function TaskList({ name = USER_NAME }) {
+  const { nowTask, queue, completedToday, filter } = useTasks()
   const { completeWithUndo } = useApp()
   const [exiting, setExiting] = useState({})
 
@@ -22,9 +23,7 @@ export default function TaskList() {
   }
 
   if (!nowTask) {
-    return (
-      <EmptyState done={completedToday} />
-    )
+    return <EmptyState done={completedToday} filter={filter} name={name} />
   }
 
   return (
@@ -56,26 +55,37 @@ export default function TaskList() {
   )
 }
 
-function EmptyState({ done }) {
+function EmptyState({ done, filter, name }) {
+  const kind = KINDS.find((item) => item.id === filter)
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 pb-16 pt-10 text-center">
       <div className="mb-8 flex h-28 w-28 items-center justify-center rounded-full border border-line">
         <div className="h-2.5 w-2.5 rounded-full bg-sage/70" />
       </div>
-      {done > 0 ? (
+      {kind ? (
+        <>
+          <p className="text-[20px] font-medium tracking-tight text-cream">{kind.empty}</p>
+          <p className="mt-2 max-w-[16rem] text-[15px] leading-relaxed text-mute">
+            Toque no + e capture um {kind.label.toLowerCase()}, {name}.
+          </p>
+        </>
+      ) : done > 0 ? (
         <>
           <p className="text-[20px] font-medium tracking-tight text-cream">
             {done === 1 ? '1 feita hoje' : `${done} feitas hoje`}
           </p>
           <p className="mt-2 max-w-[16rem] text-[15px] leading-relaxed text-mute">
-            A mente pode descansar. Capture de novo quando quiser.
+            Pode descansar, {name}. Capture de novo quando quiser.
           </p>
         </>
       ) : (
         <>
-          <p className="text-[20px] font-medium tracking-tight text-cream">Nada na frente</p>
+          <p className="text-[20px] font-medium tracking-tight text-cream">
+            Nada na frente, {name}
+          </p>
           <p className="mt-2 max-w-[16rem] text-[15px] leading-relaxed text-mute">
-            Toque no + e tire o pensamento da cabeça. Sem organizar, sem julgar.
+            Toque no + e escolha: tarefa, estudo, lembrete ou pessoal.
           </p>
         </>
       )}

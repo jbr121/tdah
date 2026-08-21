@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { startOfDay } from '../lib/format'
+import { KINDS } from '../lib/kinds'
 
 const STORAGE_KEY = 'agora.tasks.v2'
 const LEGACY_KEY = 'agora.tasks.v1'
@@ -12,42 +13,51 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function normalizeKind(kind) {
+  return KINDS.some((item) => item.id === kind) ? kind : 'tarefa'
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (parsed && Array.isArray(parsed.tasks)) {
-        return { tasks: parsed.tasks, nowId: parsed.nowId ?? null }
+        return {
+          tasks: parsed.tasks,
+          nowId: parsed.nowId ?? null,
+          filter: parsed.filter ?? 'all',
+        }
       }
     }
 
     const legacy = localStorage.getItem(LEGACY_KEY)
     if (legacy) {
       const tasks = JSON.parse(legacy)
-      if (Array.isArray(tasks)) return { tasks, nowId: null }
+      if (Array.isArray(tasks)) return { tasks, nowId: null, filter: 'all' }
     }
   } catch {
     // ignore corrupted storage
   }
 
-  return { tasks: [], nowId: null }
+  return { tasks: [], nowId: null, filter: 'all' }
 }
 
 export function TasksProvider({ children }) {
-  const [{ tasks, nowId }, setState] = useState(loadState)
+  const [{ tasks, nowId, filter }, setState] = useState(loadState)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, nowId }))
-  }, [tasks, nowId])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, nowId, filter }))
+  }, [tasks, nowId, filter])
 
-  const addTask = useCallback((text) => {
+  const addTask = useCallback((text, kind = 'tarefa') => {
     const trimmed = text.trim()
     if (!trimmed) return null
 
     const task = {
       id: createId(),
       text: trimmed,
+      kind: normalizeKind(kind),
       createdAt: Date.now(),
       completedAt: null,
       remindAt: null,
@@ -57,6 +67,9 @@ export function TasksProvider({ children }) {
     setState((current) => ({
       tasks: [task, ...current.tasks],
       nowId: current.nowId,
+      filter: task.kind === current.filter || current.filter === 'all'
+        ? current.filter
+        : task.kind,
     }))
 
     return task
@@ -70,6 +83,7 @@ export function TasksProvider({ children }) {
           : task
       ),
       nowId: current.nowId === id ? null : current.nowId,
+      filter: current.filter,
     }))
   }, [])
 
@@ -79,11 +93,16 @@ export function TasksProvider({ children }) {
         task.id === id ? { ...task, completedAt: null } : task
       ),
       nowId: current.nowId ?? id,
+      filter: current.filter,
     }))
   }, [])
 
   const setNow = useCallback((id) => {
     setState((current) => ({ ...current, nowId: id }))
+  }, [])
+
+  const setFilter = useCallback((next) => {
+    setState((current) => ({ ...current, filter: next }))
   }, [])
 
   const patchTask = useCallback((id, patch) => {
@@ -112,20 +131,25 @@ export function TasksProvider({ children }) {
     [tasks]
   )
 
+  const visible = useMemo(() => {
+    if (filter === 'all') return pending
+    return pending.filter((task) => normalizeKind(task.kind) === filter)
+  }, [pending, filter])
+
   const nowTask = useMemo(() => {
-    if (pending.length === 0) return null
-    return pending.find((task) => task.id === nowId) ??
-      pending.reduce((oldest, task) =>
+    if (visible.length === 0) return null
+    return visible.find((task) => task.id === nowId) ??
+      visible.reduce((oldest, task) =>
         task.createdAt < oldest.createdAt ? task : oldest
       )
-  }, [pending, nowId])
+  }, [visible, nowId])
 
   const queue = useMemo(() => {
     if (!nowTask) return []
-    return pending
+    return visible
       .filter((task) => task.id !== nowTask.id)
       .sort((a, b) => b.createdAt - a.createdAt)
-  }, [pending, nowTask])
+  }, [visible, nowTask])
 
   const completedToday = useMemo(() => {
     const from = startOfDay()
@@ -136,13 +160,16 @@ export function TasksProvider({ children }) {
     () => ({
       tasks,
       pending,
+      visible,
       nowTask,
       queue,
+      filter,
       completedToday,
       addTask,
       completeTask,
       uncompleteTask,
       setNow,
+      setFilter,
       setReminder,
       clearReminder,
       markReminderNotified,
@@ -150,13 +177,16 @@ export function TasksProvider({ children }) {
     [
       tasks,
       pending,
+      visible,
       nowTask,
       queue,
+      filter,
       completedToday,
       addTask,
       completeTask,
       uncompleteTask,
       setNow,
+      setFilter,
       setReminder,
       clearReminder,
       markReminderNotified,

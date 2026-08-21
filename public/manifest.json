@@ -1,7 +1,7 @@
 {
-  "name": "Agora",
-  "short_name": "Agora",
-  "description": "Um lugar calmo para capturar pensamentos e focar em uma coisa de cada vez.",
+  "name": "Malu",
+  "short_name": "Malu",
+  "description": "O espaço calmo da Malu para tarefas, estudos e lembretes.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

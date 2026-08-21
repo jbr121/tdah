@@ -1,15 +1,17 @@
 import { greeting } from '../lib/format'
+import { USER_NAME } from '../lib/kinds'
 import { useReminders } from '../hooks/useReminders'
 import { useTasks } from '../hooks/useTasks'
+import KindBar from '../components/KindBar'
 import TaskList from '../components/TaskList'
 
 export default function Home() {
-  const { nowTask, completedToday } = useTasks()
+  const { nowTask, completedToday, filter, setFilter } = useTasks()
   const { setPrefsOpen } = useReminders()
 
   return (
     <section className="flex min-h-full flex-col">
-      <header className="mb-7 flex items-start justify-between gap-3">
+      <header className="mb-5 flex items-start justify-between gap-3">
         <div>
           <p className="text-[13px] font-medium tracking-wide text-mute">{greeting()}</p>
           <h1 className="mt-1 text-[32px] font-semibold tracking-tight text-cream">Agora</h1>
@@ -28,7 +30,9 @@ export default function Home() {
           <SettingsIcon />
         </button>
       </header>
-      <TaskList />
+      <KindBar value={filter} onChange={setFilter} showAll />
+      <div className="h-4" />
+      <TaskList name={USER_NAME} />
     </section>
   )
 }
