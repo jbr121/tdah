@@ -55,7 +55,8 @@ export function AppStateProvider({ children }) {
   )
 
   const leaveFocus = useCallback(() => {
-    if (focus.session?.running) focus.pause()
+    if (focus.ended) focus.clear()
+    else if (focus.session?.running) focus.pause()
     setScreen('home')
   }, [focus])
 

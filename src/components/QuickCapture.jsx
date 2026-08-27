@@ -103,8 +103,7 @@ export default function QuickCapture() {
             <h2 className="mb-1 text-[26px] font-medium tracking-tight text-cream">
               {USER_NAME}, tira da cabeça
             </h2>
-            <p className="mb-4 text-[15px] text-mute">Escolhe o tipo e solta. Sem julgar.</p>
-            <KindBar value={kind} onChange={setKind} />
+            <p className="mb-4 text-[15px] text-mute">Solta. O tipo pode ser depois.</p>
             <textarea
               ref={inputRef}
               value={text}
@@ -113,16 +112,8 @@ export default function QuickCapture() {
               enterKeyHint="done"
               autoCapitalize="sentences"
               autoCorrect="on"
-              placeholder={
-                kind === 'estudo'
-                  ? 'Matéria, prova, leitura…'
-                  : kind === 'lembrete'
-                    ? 'O que você não pode esquecer?'
-                    : kind === 'pessoal'
-                      ? 'Casa, gente, você…'
-                      : 'O que precisa ser feito?'
-              }
-              className="mt-3 min-h-28 w-full flex-1 resize-none rounded-[22px] border-0 bg-panel px-4 py-4 text-[17px] leading-relaxed text-cream outline-none placeholder:text-mute/70"
+              placeholder="O que tá na cabeça?"
+              className="min-h-28 w-full flex-1 resize-none rounded-[22px] border-0 bg-panel px-4 py-4 text-[17px] leading-relaxed text-cream outline-none placeholder:text-mute/70"
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault()
@@ -130,6 +121,10 @@ export default function QuickCapture() {
                 }
               }}
             />
+            <p className="mt-4 mb-2 text-[12px] font-medium uppercase tracking-[0.16em] text-mute">
+              Tipo, se quiser
+            </p>
+            <KindBar value={kind} onChange={setKind} />
             <button
               type="button"
               onClick={save}

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { playChime, playTap, unlockAlarm } from '../lib/alarm'
-import { ensureNotifyPermission, notify } from '../lib/notify'
+import { notify } from '../lib/notify'
 import { cancelRemoteReminder, enablePush, isStandalone, scheduleRemoteReminder } from '../lib/push'
 import { useFocus } from './useFocus'
 import { usePrefs } from './usePrefs'
@@ -141,15 +141,9 @@ export function RemindersProvider({ children }) {
       setReminder(task.id, remindAt)
       unlockAlarm()
       setSheetTask(null)
-
-      if (!prefs.notify) return
-
-      const permission = await ensureNotifyPermission()
-      if (!permission) return
-
       await scheduleRemoteReminder(task, remindAt)
     },
-    [prefs.notify, setReminder]
+    [setReminder]
   )
 
   const snooze = useCallback(

@@ -1,26 +1,31 @@
-const CACHE_NAME = 'agora-v5'
+const CACHE_NAME = 'agora-v7'
 const BASE = new URL('./', self.location).pathname
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting()
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
       cache.addAll([BASE, `${BASE}index.html`, `${BASE}manifest.json`])
     )
   )
-  self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    )
+    ).then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
+
+  const url = new URL(event.request.url)
+  if (url.pathname.endsWith('/sw.js')) {
+    event.respondWith(fetch(event.request))
+    return
+  }
 
   event.respondWith(
     fetch(event.request)
@@ -36,7 +41,8 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let data = { title: 'Malu', body: 'Hora de olhar pra isso.' }
   try {
-    data = { ...data, ...event.data.json() }
+    const parsed = event.data?.json()
+    if (parsed && typeof parsed === 'object') data = { ...data, ...parsed }
   } catch {
     const text = event.data?.text()
     if (text) data.body = text
@@ -48,6 +54,7 @@ self.addEventListener('push', (event) => {
       icon: `${BASE}icon-192.png`,
       badge: `${BASE}icon-192.png`,
       tag: data.tag || 'malu',
+      renotify: true,
       data: { url: BASE },
     })
   )

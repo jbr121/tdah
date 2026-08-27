@@ -1,10 +1,12 @@
-import { USER_NAME } from './kinds'
+import { SPARK_MS, USER_NAME } from './kinds'
 
 export const FOCUS_MS = 25 * 60 * 1000
 export const BREAK_MS = 5 * 60 * 1000
+export const TEN_MS = 10 * 60 * 1000
 export const FOCUS_OPTIONS = [
-  { label: '10 min', ms: 10 * 60 * 1000 },
-  { label: '25 min', ms: 25 * 60 * 1000 },
+  { label: '2 min', ms: SPARK_MS },
+  { label: '10 min', ms: TEN_MS },
+  { label: '25 min', ms: FOCUS_MS },
   { label: '50 min', ms: 50 * 60 * 1000 },
 ]
 
@@ -20,6 +22,27 @@ export function greeting() {
   if (hour < 12) return `Bom dia, ${USER_NAME}`
   if (hour < 18) return `Boa tarde, ${USER_NAME}`
   return `Boa noite, ${USER_NAME}`
+}
+
+export function feltCaption(progress, remainingMs, { ended, running, isBreak, isSpark } = {}) {
+  if (ended) {
+    if (isBreak) return 'pausa concluída'
+    if (isSpark) return 'já começou'
+    return 'ciclo concluído'
+  }
+  if (!running) return 'pausado. sem problema'
+  if (isBreak) return 'pode só existir'
+  if (remainingMs <= 60_000) return 'quase'
+  if (isSpark) return 'só pra entrar'
+  if (progress > 0.7) return 'ainda tem tempo'
+  if (progress > 0.3) return 'no meio'
+  return 'já tá acabando'
+}
+
+export function sittingLabel(createdAt) {
+  const days = Math.floor((Date.now() - createdAt) / 86_400_000)
+  if (days >= 2) return 'ainda aqui'
+  return null
 }
 
 export function startOfDay() {

@@ -67,9 +67,10 @@ export function TasksProvider({ children }) {
     setState((current) => ({
       tasks: [task, ...current.tasks],
       nowId: current.nowId,
-      filter: task.kind === current.filter || current.filter === 'all'
-        ? current.filter
-        : task.kind,
+      filter:
+        current.filter === 'all' || task.kind === current.filter
+          ? current.filter
+          : 'all',
     }))
 
     return task
@@ -126,6 +127,45 @@ export function TasksProvider({ children }) {
     patchTask(id, { remindNotifiedAt: remindAt })
   }, [patchTask])
 
+  const splitTask = useCallback((id, parts = 3) => {
+    setState((current) => {
+      const task = current.tasks.find((t) => t.id === id)
+      if (!task) return current
+
+      const words = task.text.split(/\s+/).filter(Boolean)
+      if (words.length <= 6) return current
+
+      const chunkSize = Math.max(1, Math.ceil(words.length / parts))
+      const newTasks = []
+      for (let i = 0; i < parts; i++) {
+        const start = i * chunkSize
+        if (start >= words.length) break
+        const chunk = words.slice(start, start + chunkSize).join(' ')
+        newTasks.push({
+          id: createId(),
+          text: `${chunk}`,
+          kind: task.kind,
+          createdAt: Date.now() + i + 1,
+          completedAt: null,
+          remindAt: null,
+          remindNotifiedAt: null,
+          parentId: id,
+        })
+      }
+
+      // insert new tasks right after the original
+      const idx = current.tasks.findIndex((t) => t.id === id)
+      const before = current.tasks.slice(0, idx + 1)
+      const after = current.tasks.slice(idx + 1)
+      return {
+        ...current,
+        tasks: [...before, ...newTasks, ...after],
+        nowId: newTasks[0]?.id ?? current.nowId,
+        filter: current.filter,
+      }
+    })
+  }, [])
+
   const pending = useMemo(
     () => tasks.filter((task) => !task.completedAt),
     [tasks]
@@ -173,6 +213,7 @@ export function TasksProvider({ children }) {
       setReminder,
       clearReminder,
       markReminderNotified,
+      splitTask,
     }),
     [
       tasks,

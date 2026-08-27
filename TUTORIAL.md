@@ -30,8 +30,10 @@ Se abrir pela aba do Safari de novo, os avisos falham.
 
 Se não aparecer:
 
+- Apague o ícone antigo da Tela de Início, adicione de novo e abra pelo ícone novo.
 - **Ajustes → Malu → Avisos** → ligue os avisos.
 - Confira se você abriu pelo **ícone**, não pelo Safari.
+- No app: engrenagem → **Enviar aviso de teste**. Sem o teste, o iPhone não avisa com a tela bloqueada.
 
 Não precisa mais colocar nada no Calendário. Um lembrete no app já agenda o aviso.
 
@@ -42,15 +44,13 @@ Não precisa mais colocar nada no Calendário. Um lembrete no app já agenda o a
 O **+** verde fica sempre embaixo.
 
 1. Toque no **+**.
-2. Escolha o tipo:
-   - **Tarefa** — coisa para fazer
-   - **Estudo** — matéria, prova, leitura (foco de 50 min)
-   - **Lembrete** — o que não pode esquecer (já pede a hora)
-   - **Pessoal** — casa, gente, você
-3. Escreve sem filtrar.
+2. **Escreve primeiro.** Sem filtrar, sem escolher tipo.
+3. O tipo (tarefa, estudo, lembrete, pessoal) é opcional, embaixo.
 4. Toque em **Capturar**.
 
-Pronto. Sai da cabeça.
+Pronto. Sai da cabeça. Não precisa organizar.
+
+No meio do foco, se passar outra coisa na cabeça: **Tá na cabeça** → guarda e o timer segue. Não precisa trocar de tarefa.
 
 ---
 
@@ -58,13 +58,15 @@ Pronto. Sai da cabeça.
 
 Em cima você filtra: **Tudo / Tarefa / Estudo / Lembrete / Pessoal**.
 
+O filtro **não esconde o resto para sempre**. Se filtrar, aparece um aviso: as outras continuam em Tudo.
+
 O cartão grande é o **Agora** — uma coisa de cada vez.
 
-- Círculo à esquerda: **concluir** (dá para **Desfazer** por alguns segundos).
-- Botão verde: **Focar** / **Estudar**.
+- Círculo à esquerda: **concluir** (vale o “serve”, dá para **Desfazer**).
+- Botão verde: **Só 2 min** — atravessa a trava de começar. Não é um Pomodoro de verdade.
 - Sino: **marcar hora do aviso**.
 
-O que sobra fica em **Depois**. Toque para trazer para o foco.
+O que sobra fica em **Depois**. Só mostra um pedaço. O resto pode ficar quieto.
 
 ---
 
@@ -74,18 +76,19 @@ O que sobra fica em **Depois**. Toque para trazer para o foco.
 2. Escolha: 5 min, 15 min, 1 hora, 3 horas, hoje 20h, amanhã 8h, ou um horário.
 3. Pronto. Pode bloquear o iPhone.
 
-Quando disparar: **Focar**, **Daqui a 10 min** ou **Dispensar**.
+Quando disparar: **Só 2 min**, **Daqui a 10 min** ou **Dispensar**.
 
 ---
 
 ## 6. Modo Foco
 
-Tela só para uma coisa. O círculo esvazia (Pomodoro).
+A trava do TDAH é **começar**, não o relógio.
 
-- **Tarefa / pessoal:** 25 min (dá para escolher 10 ou 50).
-- **Estudo:** 50 min.
-- Durante o ciclo só aparecem **Pausar** e **Concluir**.
-- No fim: concluir, pausa de 5 min, ou mais um ciclo.
+- O padrão é **2 minutos**. Só para entrar.
+- No fim dos 2 min: continuar 10, continuar 25, ou **já deu** — não é falha.
+- Se quiser 10, 25 ou 50, escolhe antes. Pausar no meio também não é falha.
+- O círculo fala o tempo em sensação: ainda tem tempo / no meio / já tá acabando.
+- No meio, **Tá na cabeça** guarda um pensamento sem largar o que você está fazendo.
 
 ---
 
@@ -96,7 +99,7 @@ Tela só para uma coisa. O círculo esvazia (Pomodoro).
 | Não instalou | Safari → Compartilhar → Tela de Início |
 | Sem aviso com a tela bloqueada | Abrir pelo ícone + Ativar avisos |
 | Aviso bloqueado | Ajustes → Malu → Avisos |
-| Lista vazia estranha | Filtro em **Tudo** |
+| Lista vazia estranha | Filtro em **Tudo** — nada some de verdade |
 | Concluiu sem querer | **Desfazer** no aviso de baixo |
 
 Os dados ficam **só neste iPhone** (não tem conta, não vai para a nuvem da Malu).

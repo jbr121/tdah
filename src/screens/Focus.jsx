@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { unlockAlarm } from '../lib/alarm'
-import { FOCUS_OPTIONS, formatMs } from '../lib/format'
-import { defaultFocusMs, kindOf } from '../lib/kinds'
+import { feltCaption, FOCUS_MS, FOCUS_OPTIONS, formatMs, TEN_MS } from '../lib/format'
+import { defaultFocusMs, isSparkDuration, kindOf, SPARK_MS } from '../lib/kinds'
 import { useApp } from '../hooks/useApp'
 import { useFocus } from '../hooks/useFocus'
 import { useTasks } from '../hooks/useTasks'
 import TimerRing from '../components/TimerRing'
 
 export default function Focus() {
-  const { pending, nowTask } = useTasks()
+  const { pending, nowTask, addTask } = useTasks()
   const {
     session,
     remainingMs,
@@ -18,17 +18,21 @@ export default function Focus() {
     resume,
     anotherCycle,
     startBreak,
+    start,
   } = useFocus()
   const { startFocus, leaveFocus, completeWithUndo } = useApp()
 
   const focused = pending.find((task) => task.id === session?.taskId) ?? nowTask
-  const [duration, setDuration] = useState(() => defaultFocusMs(focused?.kind))
+  const [duration, setDuration] = useState(() => defaultFocusMs())
+  const [parking, setParking] = useState(false)
+  const [parked, setParked] = useState(false)
   const isBreak = session?.kind === 'break'
   const kind = kindOf(focused)
+  const spark = isSparkDuration(session?.durationMs)
 
   useEffect(() => {
-    if (!session) setDuration(defaultFocusMs(focused?.kind))
-  }, [focused?.id, focused?.kind, session])
+    if (!session) setDuration(defaultFocusMs())
+  }, [focused?.id, session])
 
   if (!focused) {
     return (
@@ -38,7 +42,7 @@ export default function Focus() {
         </div>
         <h1 className="text-[22px] font-medium tracking-tight text-cream">Nada para focar</h1>
         <p className="mt-2 max-w-[16rem] text-[15px] leading-relaxed text-mute">
-          Capture um pensamento, Malu. Depois volte aqui e faça só isso.
+          Capture um pensamento, Malu. Depois volte e faça só o primeiro pedaço.
         </p>
       </section>
     )
@@ -59,15 +63,15 @@ export default function Focus() {
           <TimerRing
             progress={1}
             label={formatMs(duration)}
-            caption={kind.id === 'estudo' ? 'bloco de estudo' : 'um ciclo'}
+            caption={duration <= SPARK_MS + 1000 ? 'só pra entrar' : 'um ciclo'}
           />
-          <div className="mt-8 flex w-full max-w-xs gap-2">
+          <div className="mt-8 grid w-full max-w-xs grid-cols-2 gap-2">
             {FOCUS_OPTIONS.map((option) => (
               <button
                 key={option.ms}
                 type="button"
                 onClick={() => setDuration(option.ms)}
-                className={`h-11 flex-1 rounded-full text-[13px] font-medium ${
+                className={`h-12 rounded-2xl text-[14px] font-medium ${
                   duration === option.ms ? 'bg-sage text-ink' : 'bg-panel text-mute'
                 }`}
               >
@@ -75,27 +79,29 @@ export default function Focus() {
               </button>
             ))}
           </div>
+          <p className="mt-4 max-w-xs text-center text-[13px] leading-relaxed text-mute">
+            {duration <= SPARK_MS + 1000
+              ? 'Dois minutos atravessam a trava de começar. Depois você decide.'
+              : 'Pode parar no meio. Não conta como falha.'}
+          </p>
           <button
             type="button"
             onClick={() => startFocus(focused.id, duration)}
             className="mt-6 flex h-14 w-full max-w-xs items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
           >
-            {kind.id === 'estudo' ? 'Estudar' : 'Começar'}
+            {duration <= SPARK_MS + 1000 ? 'Só 2 min' : 'Começar'}
           </button>
         </div>
       </section>
     )
   }
 
-  const caption = ended
-    ? isBreak
-      ? 'pausa concluída'
-      : 'ciclo concluído'
-    : session.running
-      ? isBreak
-        ? 'descanse'
-        : 'só isso'
-      : 'pausado'
+  const caption = feltCaption(progress, remainingMs, {
+    ended,
+    running: session.running,
+    isBreak,
+    isSpark: spark,
+  })
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -110,6 +116,15 @@ export default function Focus() {
         >
           Sair
         </button>
+        {!isBreak && !ended && (
+          <button
+            type="button"
+            onClick={() => setParking(true)}
+            className="flex min-h-12 items-center px-2 text-[15px] text-mute"
+          >
+            Tá na cabeça
+          </button>
+        )}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4">
@@ -122,6 +137,9 @@ export default function Focus() {
           caption={caption}
           size={248}
         />
+        {parked && (
+          <p className="mt-4 text-[13px] text-sage">Guardei. Continua aqui.</p>
+        )}
       </div>
 
       <div
@@ -152,6 +170,36 @@ export default function Focus() {
                 Mais 5 min
               </button>
             </>
+          ) : spark ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  unlockAlarm()
+                  start(focused.id, TEN_MS)
+                }}
+                className="flex h-14 items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
+              >
+                Continuar 10 min
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  unlockAlarm()
+                  start(focused.id, FOCUS_MS)
+                }}
+                className="flex h-14 items-center justify-center rounded-2xl bg-panel text-[16px] font-medium text-cream"
+              >
+                Continuar 25 min
+              </button>
+              <button
+                type="button"
+                onClick={leaveFocus}
+                className="flex h-12 items-center justify-center text-[15px] text-mute"
+              >
+                Já deu por agora
+              </button>
+            </>
           ) : (
             <>
               <button
@@ -159,7 +207,7 @@ export default function Focus() {
                 onClick={() => completeWithUndo(focused.id)}
                 className="flex h-14 items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
               >
-                Concluir
+                Serve, concluir
               </button>
               <button
                 type="button"
@@ -179,7 +227,7 @@ export default function Focus() {
                 }}
                 className="flex h-12 items-center justify-center text-[15px] text-mute"
               >
-                Mais 25 min
+                Mais um ciclo
               </button>
             </>
           )
@@ -202,12 +250,95 @@ export default function Focus() {
                 onClick={() => completeWithUndo(focused.id)}
                 className="flex h-14 items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
               >
-                Concluir
+                Serve, concluir
               </button>
             )}
           </>
         )}
       </div>
+
+      {parking && (
+        <ParkSheet
+          onClose={() => setParking(false)}
+          onSave={(text) => {
+            const task = addTask(text)
+            if (!task) return
+            setParking(false)
+            setParked(true)
+            window.setTimeout(() => setParked(false), 2500)
+          }}
+        />
+      )}
     </section>
+  )
+}
+
+function ParkSheet({ onClose, onSave }) {
+  const [text, setText] = useState('')
+  const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const syncHeight = () => setViewportHeight(viewport?.height ?? window.innerHeight)
+    syncHeight()
+    viewport?.addEventListener('resize', syncHeight)
+    const id = window.setTimeout(() => inputRef.current?.focus(), 80)
+    return () => {
+      window.clearTimeout(id)
+      viewport?.removeEventListener('resize', syncHeight)
+    }
+  }, [])
+
+  const canSave = text.trim().length > 0
+
+  return (
+    <div
+      className="absolute inset-x-0 top-0 z-40 flex flex-col bg-ink/95"
+      style={{ height: viewportHeight }}
+    >
+      <div
+        className="flex items-center justify-between px-2"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex min-h-12 min-w-20 items-center px-3 text-[16px] text-mute"
+        >
+          Voltar
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col px-5 pb-4">
+        <h2 className="mb-1 text-[24px] font-medium tracking-tight text-cream">
+          Guarda e continua
+        </h2>
+        <p className="mb-4 text-[15px] text-mute">Não precisa resolver agora. O timer segue.</p>
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          rows={4}
+          enterKeyHint="done"
+          autoCapitalize="sentences"
+          placeholder="O que passou na cabeça?"
+          className="min-h-28 w-full flex-1 resize-none rounded-[22px] border-0 bg-panel px-4 py-4 text-[17px] leading-relaxed text-cream outline-none placeholder:text-mute/70"
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
+              if (canSave) onSave(text)
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => canSave && onSave(text)}
+          disabled={!canSave}
+          className="mt-4 flex min-h-14 w-full shrink-0 items-center justify-center rounded-2xl bg-sage text-base font-semibold text-ink enabled:active:scale-[0.98] disabled:opacity-35"
+        >
+          Guardar
+        </button>
+      </div>
+    </div>
   )
 }

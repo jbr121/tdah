@@ -1,29 +1,35 @@
 import { useState } from 'react'
-import { isStandalone, sendTestPush } from '../lib/push'
+import { explainPushError, isStandalone, sendTestPush } from '../lib/push'
 import { usePrefs } from '../hooks/usePrefs'
 import { useReminders } from '../hooks/useReminders'
+import AdhdTips from './AdhdTips'
 
 export default function PrefsSheet() {
   const { prefsOpen, setPrefsOpen, enablePush } = useReminders()
   const { prefs, updatePrefs } = usePrefs()
   const [status, setStatus] = useState('')
   const standalone = isStandalone()
+  const [showTips, setShowTips] = useState(false)
 
   if (!prefsOpen) return null
 
   async function activate() {
     const result = await enablePush()
     if (result.ok) setStatus('Avisos ligados. Pode fechar o app.')
-    else if (result.reason === 'denied') setStatus('O iPhone bloqueou. Ajustes → Malu → Avisos.')
-    else setStatus('Abra pelo ícone da Tela de Início e tente de novo.')
+    else setStatus(explainPushError(result.reason))
   }
 
   async function test() {
     const result = await sendTestPush()
-    setStatus(result.ok ? 'Mandei um teste. Bloqueia a tela e espera uns segundos.' : 'Não consegui enviar o teste.')
+    setStatus(
+      result.ok
+        ? 'Mandei um teste. Bloqueia a tela e espera uns segundos.'
+        : explainPushError(result.reason)
+    )
   }
 
   return (
+    <>
     <div className="absolute inset-0 z-40 flex flex-col justify-end bg-black/70">
       <button
         type="button"
@@ -54,6 +60,13 @@ export default function PrefsSheet() {
         </button>
         <button
           type="button"
+          onClick={() => setShowTips(true)}
+          className="mt-3 flex h-12 w-full items-center justify-center text-[15px] text-mute"
+        >
+          Ajuda para TDAH
+        </button>
+        <button
+          type="button"
           onClick={test}
           className="mt-2 flex h-12 w-full items-center justify-center text-[15px] text-mute"
         >
@@ -69,6 +82,8 @@ export default function PrefsSheet() {
         />
       </div>
     </div>
+    {showTips && <AdhdTips onClose={() => setShowTips(false)} />}
+    </>
   )
 }
 

@@ -9,7 +9,7 @@ export default function UndoToast() {
       className="toast-in absolute inset-x-4 z-20 flex items-center justify-between rounded-2xl bg-panel-2 px-4 py-3"
       style={{ bottom: 'calc(9.25rem + env(safe-area-inset-bottom))' }}
     >
-      <p className="text-[15px] text-cream">Feito.</p>
+      <p className="text-[15px] text-cream">Serve.</p>
       <button
         type="button"
         onClick={undoComplete}

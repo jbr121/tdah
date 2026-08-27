@@ -19,7 +19,7 @@ export default function ReminderAlert() {
           onClick={() => focusFromAlert(alertTask)}
           className="mt-6 flex h-14 w-full items-center justify-center rounded-2xl bg-sage text-[16px] font-semibold text-ink active:scale-[0.98]"
         >
-          Focar
+          Só 2 min
         </button>
         <button
           type="button"

@@ -12,12 +12,12 @@ export function kindOf(task) {
   return KINDS.find((kind) => kind.id === id) ?? KINDS[0]
 }
 
-export function defaultFocusMs(kind) {
-  return kind === 'estudo' ? 50 * 60 * 1000 : 25 * 60 * 1000
+export const SPARK_MS = 2 * 60 * 1000
+
+export function defaultFocusMs() {
+  return SPARK_MS
 }
 
-export function focusVerb(kind) {
-  if (kind === 'estudo') return 'Estudar'
-  if (kind === 'lembrete') return 'Olhar'
-  return 'Focar'
+export function isSparkDuration(ms) {
+  return Boolean(ms) && ms <= SPARK_MS + 1000
 }

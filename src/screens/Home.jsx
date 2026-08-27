@@ -1,5 +1,6 @@
 import { greeting } from '../lib/format'
 import { USER_NAME } from '../lib/kinds'
+import { useFocus } from '../hooks/useFocus'
 import { useReminders } from '../hooks/useReminders'
 import { useTasks } from '../hooks/useTasks'
 import KindBar from '../components/KindBar'
@@ -8,12 +9,20 @@ import TaskList from '../components/TaskList'
 export default function Home() {
   const { nowTask, completedToday, filter, setFilter } = useTasks()
   const { setPrefsOpen } = useReminders()
+  const { session, remainingMs } = useFocus()
+  const paused = Boolean(session) && !session.running && remainingMs > 0
+  const stale = Boolean(nowTask) && Date.now() - nowTask.createdAt > 36 * 60 * 60 * 1000
+  const line = paused
+    ? 'Pode voltar. Sem cobrança.'
+    : stale
+      ? 'Ainda tá aqui. Sem cobrança.'
+      : greeting()
 
   return (
     <section className="flex min-h-full flex-col">
       <header className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium tracking-wide text-mute">{greeting()}</p>
+          <p className="text-[13px] font-medium tracking-wide text-mute">{line}</p>
           <h1 className="mt-1 text-[32px] font-semibold tracking-tight text-cream">Agora</h1>
           {nowTask && completedToday > 0 && (
             <p className="mt-1.5 text-[14px] text-mute">

@@ -1,6 +1,5 @@
 import { buildPushHTTPRequest } from '@pushforge/builder'
 
-const STORE = 'https://agora.malu/store'
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
@@ -14,34 +13,25 @@ function json(data, status = 200) {
   })
 }
 
-async function loadStore() {
-  const cached = await caches.default.match(STORE)
-  if (!cached) return { subscription: null, reminders: [] }
-  try {
-    return await cached.json()
-  } catch {
-    return { subscription: null, reminders: [] }
+function asSubscription(value) {
+  if (!value?.endpoint || !value?.keys?.p256dh || !value?.keys?.auth) return null
+  return {
+    endpoint: value.endpoint,
+    expirationTime: value.expirationTime ?? null,
+    keys: {
+      p256dh: value.keys.p256dh,
+      auth: value.keys.auth,
+    },
   }
 }
 
-async function saveStore(data) {
-  await caches.default.put(
-    STORE,
-    new Response(JSON.stringify(data), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'max-age=31536000',
-      },
-    })
-  )
-}
-
 async function sendPush(env, subscription, title, body) {
-  if (!subscription?.endpoint) return false
+  const sub = asSubscription(subscription)
+  if (!sub) return { ok: false, reason: 'subscription' }
   const privateJWK = JSON.parse(env.VAPID_PRIVATE_JWK)
   const { endpoint, headers, body: payload } = await buildPushHTTPRequest({
     privateJWK,
-    subscription,
+    subscription: sub,
     message: {
       payload: { title, body, tag: 'malu' },
       adminContact: 'mailto:agora@local',
@@ -49,23 +39,39 @@ async function sendPush(env, subscription, title, body) {
     },
   })
   const response = await fetch(endpoint, { method: 'POST', headers, body: payload })
-  return response.ok || response.status === 201
+  const ok = response.status >= 200 && response.status < 300
+  return { ok, status: response.status }
 }
 
-async function sendDue(env) {
-  const store = await loadStore()
-  if (!store.subscription) return { sent: 0 }
-  const now = Date.now()
-  let sent = 0
-  for (const reminder of store.reminders) {
-    if (reminder.sent || reminder.remindAt > now) continue
-    const ok = await sendPush(env, store.subscription, 'Malu', reminder.text)
-    reminder.sent = true
-    if (ok) sent += 1
+async function continueWait(origin, ctx, job) {
+  const left = job.remindAt - Date.now()
+  if (left <= 2500) {
+    const result = await sendPush(job.env, job.subscription, 'Malu', job.text)
+    return { sent: result.ok, status: result.status }
   }
-  store.reminders = store.reminders.filter((item) => !item.sent || item.remindAt > now - 86400000)
-  await saveStore(store)
-  return { sent }
+
+  const slice = Math.min(left, 15000)
+  const hops = (job.hops || 0) + 1
+  if (hops > 6000) return { sent: false, reason: 'expired' }
+
+  ctx.waitUntil(
+    (async () => {
+      await new Promise((resolve) => setTimeout(resolve, slice))
+      await fetch(`${origin}/wait-send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: job.id,
+          text: job.text,
+          remindAt: job.remindAt,
+          subscription: job.subscription,
+          hops,
+        }),
+      })
+    })()
+  )
+
+  return { waitingMs: slice, hops }
 }
 
 export default {
@@ -75,79 +81,63 @@ export default {
     }
 
     const url = new URL(request.url)
+    const origin = url.origin
 
     if (request.method === 'GET' && url.pathname === '/health') {
-      const store = await loadStore()
-      return json({
-        ok: true,
-        hasSubscription: Boolean(store.subscription),
-        reminders: store.reminders.filter((item) => !item.sent).length,
-      })
+      return json({ ok: true })
     }
 
     if (request.method === 'POST' && url.pathname === '/subscribe') {
-      const subscription = await request.json()
-      const store = await loadStore()
-      store.subscription = subscription
-      await saveStore(store)
+      const body = await request.json()
+      const subscription = asSubscription(body)
+      if (!subscription) return json({ ok: false, reason: 'subscription' }, 400)
       return json({ ok: true })
     }
 
     if (request.method === 'POST' && url.pathname === '/reminder') {
       const reminder = await request.json()
-      const store = await loadStore()
-      store.reminders = store.reminders.filter((item) => item.id !== reminder.id)
-      store.reminders.push({
+      const subscription = asSubscription(reminder.subscription)
+      if (!subscription || !reminder.remindAt) {
+        return json({ ok: false, reason: 'invalid' }, 400)
+      }
+      const result = await continueWait(origin, ctx, {
+        env,
         id: reminder.id,
-        text: reminder.text,
+        text: reminder.text || 'Hora de olhar pra isso.',
         remindAt: reminder.remindAt,
-        sent: false,
+        subscription,
+        hops: 0,
       })
-      if (reminder.subscription) store.subscription = reminder.subscription
-      await saveStore(store)
-      const origin = new URL(request.url).origin
-      ctx.waitUntil(fetch(`${origin}/wait-send?at=${reminder.remindAt}`))
-      return json({ ok: true })
+      return json({ ok: true, ...result })
     }
 
-    if (request.method === 'DELETE' && url.pathname === '/reminder') {
-      const { id } = await request.json()
-      const store = await loadStore()
-      store.reminders = store.reminders.filter((item) => item.id !== id)
-      await saveStore(store)
-      return json({ ok: true })
+    if (request.method === 'POST' && url.pathname === '/wait-send') {
+      const job = await request.json()
+      const subscription = asSubscription(job.subscription)
+      if (!subscription) return json({ ok: false, reason: 'subscription' }, 400)
+      const result = await continueWait(origin, ctx, {
+        env,
+        ...job,
+        subscription,
+      })
+      return json({ ok: true, ...result })
     }
 
     if (request.method === 'POST' && url.pathname === '/test') {
-      const store = await loadStore()
-      const ok = await sendPush(env, store.subscription, 'Malu', 'Aviso de teste. Pode fechar o app.')
-      return json({ ok })
+      const body = await request.json()
+      const result = await sendPush(
+        env,
+        body.subscription,
+        'Malu',
+        body.text || 'Aviso de teste. Se você viu isto, os avisos estão ligados.'
+      )
+      return json(result, result.ok ? 200 : 502)
     }
 
-    if (request.method === 'GET' && url.pathname === '/tick') {
-      return json(await sendDue(env))
-    }
-
-    if (request.method === 'GET' && url.pathname === '/wait-send') {
-      const remindAt = Number(url.searchParams.get('at') || 0)
-      const left = remindAt - Date.now()
-      if (left > 2500) {
-        const slice = Math.min(left, 20000)
-        ctx.waitUntil(
-          (async () => {
-            await new Promise((resolve) => setTimeout(resolve, slice))
-            await fetch(`${url.origin}/wait-send?at=${remindAt}`)
-          })()
-        )
-        return json({ waitingMs: slice })
-      }
-      return json(await sendDue(env))
+    if (request.method === 'DELETE' && url.pathname === '/reminder') {
+      return json({ ok: true })
     }
 
     return json({ error: 'not found' }, 404)
-  },
-
-  async scheduled(_event, env) {
-    await sendDue(env)
   },
 }

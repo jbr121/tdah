@@ -1,5 +1,5 @@
-import { formatMs, formatWhen } from '../lib/format'
-import { focusVerb, kindOf } from '../lib/kinds'
+import { feltCaption, formatMs, formatWhen, sittingLabel } from '../lib/format'
+import { isSparkDuration, kindOf } from '../lib/kinds'
 import { useApp } from '../hooks/useApp'
 import { useFocus } from '../hooks/useFocus'
 import { useReminders } from '../hooks/useReminders'
@@ -13,13 +13,14 @@ export default function NowCard({ task, leaving, onComplete }) {
   const kind = kindOf(task)
   const isFocused = session?.taskId === task.id
   const hasCycle = isFocused && remainingMs < (session?.durationMs ?? 0)
+  const sitting = sittingLabel(task.createdAt)
   const cta = ended && isFocused
-    ? 'Outro ciclo'
+    ? 'Continuar'
     : hasCycle
       ? 'Continuar'
       : kind.id === 'lembrete' && !(task.remindAt && task.remindAt > Date.now())
         ? 'Definir alarme'
-        : focusVerb(kind.id)
+        : 'Só 2 min'
   const upcoming = task.remindAt && task.remindAt > Date.now()
 
   function handlePrimary() {
@@ -29,6 +30,7 @@ export default function NowCard({ task, leaving, onComplete }) {
     }
     startFocus(task.id)
   }
+  const { splitTask } = useTasks()
 
   return (
     <article
@@ -58,9 +60,11 @@ export default function NowCard({ task, leaving, onComplete }) {
       >
         {task.text}
       </p>
-      {upcoming && (
+      {upcoming ? (
         <p className="mt-2 text-[13px] text-mute">Lembra {formatWhen(task.remindAt)}</p>
-      )}
+      ) : sitting ? (
+        <p className="mt-2 text-[13px] text-mute">Ainda aqui. Sem cobrança.</p>
+      ) : null}
 
       {hasCycle && !leaving && (
         <div className="mt-5 flex items-center gap-4">
@@ -70,7 +74,12 @@ export default function NowCard({ task, leaving, onComplete }) {
             size={72}
           />
           <p className="text-[14px] text-mute">
-            {ended ? 'Ciclo concluído' : session?.running ? 'Em foco' : 'Pausado'}
+            {feltCaption(progress, remainingMs, {
+              ended,
+              running: session?.running,
+              isBreak: session?.kind === 'break',
+              isSpark: isSparkDuration(session?.durationMs),
+            })}
           </p>
         </div>
       )}
@@ -98,12 +107,20 @@ export default function NowCard({ task, leaving, onComplete }) {
           {cta}
         </button>
       </div>
+       <div className="mt-2 flex items-center justify-end">
+         <button
+           type="button"
+           onClick={() => splitTask(task.id)}
+           className="text-[13px] text-mute"
+         >
+           Dividir em passos
+         </button>
+       </div>
     </article>
   )
 }
 
 export function QueueItem({ task, leaving, onComplete }) {
-  const { startFocus } = useApp()
   const { setNow } = useTasks()
   const { openReminder } = useReminders()
   const upcoming = task.remindAt && task.remindAt > Date.now()
@@ -136,7 +153,6 @@ export function QueueItem({ task, leaving, onComplete }) {
             onClick={() => {
               setNow(task.id)
               if (kind.id === 'lembrete' && !upcoming) openReminder(task)
-              else startFocus(task.id)
             }}
             className="min-w-0 flex-1 py-2 pr-1 text-left"
           >
@@ -148,7 +164,7 @@ export function QueueItem({ task, leaving, onComplete }) {
               {task.text}
             </p>
             <p className="mt-0.5 text-[12px] text-mute">
-              {kind.label}
+              {sittingLabel(task.createdAt) ?? kind.label}
               {upcoming ? ` · ${formatWhen(task.remindAt)}` : ''}
             </p>
           </button>
