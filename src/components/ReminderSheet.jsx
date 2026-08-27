@@ -4,14 +4,23 @@ import { isStandalone } from '../lib/push'
 import { useReminders } from '../hooks/useReminders'
 import { useTasks } from '../hooks/useTasks'
 
+function parseMinutes(value) {
+  const n = Number(value.replace(/[^0-9]/g, ''))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export default function ReminderSheet() {
   const { sheetTask, closeReminder, saveReminder, setSheetTask } = useReminders()
   const { clearReminder } = useTasks()
   const presets = useMemo(() => reminderPresets(), [sheetTask?.id])
-  const [custom, setCustom] = useState('09:00')
+  const [customTime, setCustomTime] = useState('09:00')
+  const [customMinutes, setCustomMinutes] = useState('')
   const standalone = isStandalone()
 
   if (!sheetTask) return null
+
+  const minutes = parseMinutes(customMinutes)
+  const fromNow = minutes ? Date.now() + minutes * 60 * 1000 : null
 
   return (
     <Sheet onClose={closeReminder}>
@@ -42,17 +51,38 @@ export default function ReminderSheet() {
         ))}
       </div>
 
-      <label className="mt-4 block text-[13px] text-mute">Horário</label>
+      <label className="mt-5 block text-[13px] text-mute">Daqui a quantos minutos?</label>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          value={customMinutes}
+          placeholder="30"
+          min={1}
+          onChange={(event) => setCustomMinutes(event.target.value)}
+          className="h-14 flex-1 rounded-2xl border-0 bg-ink px-4 text-[16px] text-cream outline-none placeholder:text-mute/50"
+        />
+        <button
+          type="button"
+          disabled={!fromNow}
+          onClick={() => fromNow && saveReminder(sheetTask, fromNow)}
+          className="h-14 rounded-2xl bg-sage px-5 text-[15px] font-semibold text-ink disabled:opacity-40"
+        >
+          Ok
+        </button>
+      </div>
+
+      <label className="mt-4 block text-[13px] text-mute">Ou um horário</label>
       <div className="mt-2 flex gap-2">
         <input
           type="time"
-          value={custom}
-          onChange={(event) => setCustom(event.target.value)}
+          value={customTime}
+          onChange={(event) => setCustomTime(event.target.value)}
           className="h-14 flex-1 rounded-2xl border-0 bg-ink px-4 text-[16px] text-cream outline-none"
         />
         <button
           type="button"
-          onClick={() => saveReminder(sheetTask, atFromTime(custom))}
+          onClick={() => saveReminder(sheetTask, atFromTime(customTime))}
           className="h-14 rounded-2xl bg-sage px-5 text-[15px] font-semibold text-ink"
         >
           Ok
